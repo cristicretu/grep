@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <string>
 
@@ -19,6 +20,26 @@ bool match_pattern(const std::string &input_line, const std::string &pattern) {
   // We finished the input line, but not the pattern, so we're done
   if (input_line.empty()) {
     return false;
+  }
+
+  if (pattern[pattern.size() - 1] == '$') {
+    std::string trimmed_pattern = pattern.substr(0, pattern.size() - 1);
+
+    if (input_line.size() >= trimmed_pattern.size() &&
+        input_line.compare(input_line.size() - trimmed_pattern.size(),
+                           trimmed_pattern.size(), trimmed_pattern) == 0) {
+      return true;
+    }
+
+    return false;
+  }
+
+  if (pattern.substr(0, 1) == "^") {
+    if (input_line.rfind(pattern.substr(1), 0) == std::string::npos) {
+      return false;
+    }
+
+    return true;
   }
 
   if (pattern.substr(0, 2) == "\\d") {
