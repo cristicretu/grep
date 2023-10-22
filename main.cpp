@@ -75,6 +75,35 @@ bool match_pattern(const std::string &input_line, const std::string &pattern) {
     }
 
     return match_pattern(input_line.substr(1), pattern.substr(index + 1));
+  } else if (pattern.substr(1, 1) == "+") {
+    char c = pattern[0];
+    size_t i = 0;
+
+    if (input_line[i] != c) {
+      return false;
+    }
+
+    while (i < input_line.size() && input_line[i] == c) {
+      i++;
+    }
+
+    return match_pattern(input_line.substr(i), pattern.substr(2));
+  } else if (pattern.substr(1, 1) == "?") {
+    char c = pattern[0];
+    std::string restPattern = pattern.substr(2);
+
+    if (input_line.empty()) {
+      return match_pattern(input_line, restPattern);
+    }
+
+    if (input_line[0] == c &&
+        match_pattern(input_line.substr(1), restPattern)) {
+      return true;
+    }
+
+    return match_pattern(input_line, restPattern);
+  } else if (pattern.substr(0, 1) == ".") {
+    return match_pattern(input_line.substr(1), pattern.substr(1));
   }
 
   if (input_line[0] != pattern[0]) {
