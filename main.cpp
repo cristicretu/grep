@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <iostream>
+#include <sstream>
+#include <string.h>
 #include <string>
 
 bool match_chars_in_group(const std::string &group, const char c) {
@@ -90,20 +92,33 @@ bool match_pattern(const std::string &input_line, const std::string &pattern) {
     return match_pattern(input_line.substr(i), pattern.substr(2));
   } else if (pattern.substr(1, 1) == "?") {
     char c = pattern[0];
-    std::string restPattern = pattern.substr(2);
 
-    if (input_line.empty()) {
-      return match_pattern(input_line, restPattern);
+    if (input_line[0] == c) {
+      if (input_line[1] == c) {
+        return false;
+      }
+
+      return match_pattern(input_line.substr(1), pattern.substr(2));
     }
 
-    if (input_line[0] == c &&
-        match_pattern(input_line.substr(1), restPattern)) {
-      return true;
-    }
-
-    return match_pattern(input_line, restPattern);
+    return match_pattern(input_line, pattern.substr(2));
   } else if (pattern.substr(0, 1) == ".") {
     return match_pattern(input_line.substr(1), pattern.substr(1));
+  } else if (pattern.substr(0, 1) == "(") {
+    auto index = pattern.find_first_of(")");
+    if (index == std::string::npos) {
+      throw std::runtime_error("Invalid pattern");
+    }
+
+    // strtok the words, spacer is "|"
+    std::string words = pattern.substr(1, index - 1);
+    std::stringstream ss(words);
+    std::string token;
+    while (std::getline(ss, token, '|')) {
+      if (match_pattern(input_line, token)) {
+        return true;
+      }
+    }
   }
 
   if (input_line[0] != pattern[0]) {
