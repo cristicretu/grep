@@ -1,74 +1,66 @@
 #include <iostream>
 #include <string>
 
-bool match_pattern(const std::string &input_line, const std::string &pattern) {
-  unsigned int input_index = 0;
-  unsigned int pattern_index = 0;
-  unsigned int input_size = input_line.size();
-  unsigned int pattern_size = pattern.size();
-
-  while (input_index < input_size && pattern_index < pattern_size) {
-    std::string command = "";
-    bool pattern_index_incremented = false;
-    if (pattern[pattern_index] == '\\') {
-      command = pattern.substr(pattern_index, 2);
-      pattern_index = pattern_index + 2;
-      pattern_index_incremented = true;
-    } else if (pattern[pattern_index] == '[') {
-      while (pattern[pattern_index] != ']') {
-        command += pattern[pattern_index];
-
-        pattern_index = pattern_index + 1;
-      }
-      pattern_index_incremented = true;
-      command += ']';
-    }
-
-    if (command == "\\d") {
-      if (std::isdigit(input_line[input_index]) == 0) {
-        return false;
-      }
-    } else if (command == "\\w") {
-      if (std::isalpha(input_line[input_index]) == 0) {
-        return false;
-      }
-    } else if (command.front() == '[' && command.back() == ']') {
-      bool negate = command[1] == '^';
-      std::string chars_to_match =
-          command.substr(negate ? 2 : 1, command.size() - (negate ? 3 : 2));
-      for (const auto &c : input_line) {
-        if (chars_to_match.find(c) != std::string::npos && !negate) {
-          return true;
-        } else if (chars_to_match.find(c) == std::string::npos && negate) {
-          return true;
-        }
-      }
-    } else {
-      if (input_line[input_index] != pattern[pattern_index]) {
-        return false;
-      }
-    }
-
-    input_index = input_index + 1;
-    pattern_index =
-        pattern_index_incremented ? pattern_index : pattern_index + 1;
-  }
-
-  return true;
-}
-
-bool recursive_match_pattern(const std::string &input_line,
-                             const std::string &pattern) {
-  if (match_pattern(input_line, pattern)) {
-    return true;
-  }
-  for (unsigned int i = 0; i < input_line.size(); i++) {
-    if (match_pattern(input_line.substr(i), pattern)) {
+bool match_chars_in_group(const std::string &group, const char c) {
+  for (char d : group) {
+    if (c == d) {
       return true;
     }
   }
-
   return false;
+}
+
+bool match_pattern(const std::string &input_line, const std::string &pattern) {
+  // We finished the pattern, so we're done
+  if (pattern.empty()) {
+    return true;
+  }
+
+  // We finished the input line, but not the pattern, so we're done
+  if (input_line.empty()) {
+    return false;
+  }
+
+  if (pattern.substr(0, 2) == "\\d") {
+    if (std::isdigit(input_line[0]) == 0) {
+      return match_pattern(input_line.substr(1), pattern);
+    }
+
+    return match_pattern(input_line.substr(1), pattern.substr(2));
+  } else if (pattern.substr(0, 2) == "\\w") {
+    if (std::isalpha(input_line[0]) == 0) {
+      return match_pattern(input_line.substr(1), pattern);
+    }
+
+    return match_pattern(input_line.substr(1), pattern.substr(2));
+  } else if (pattern.substr(0, 2) == "[^") {
+    size_t index = pattern.find_first_of("]");
+    if (index == std::string::npos) {
+      throw std::runtime_error("Invalid pattern");
+    }
+
+    if (match_chars_in_group(pattern.substr(2, index - 2), input_line[0])) {
+      return match_pattern(input_line.substr(1), pattern);
+    }
+
+    return match_pattern(input_line.substr(1), pattern.substr(index + 1));
+  } else if (pattern.substr(0, 1) == "[") {
+    size_t index = pattern.find_first_of("]");
+    if (index == std::string::npos) {
+      throw std::runtime_error("Invalid pattern");
+    }
+    if (!match_chars_in_group(pattern.substr(1, index - 1), input_line[0])) {
+      return match_pattern(input_line.substr(1), pattern);
+    }
+
+    return match_pattern(input_line.substr(1), pattern.substr(index + 1));
+  }
+
+  if (input_line[0] != pattern[0]) {
+    return match_pattern(input_line.substr(1), pattern);
+  }
+
+  return match_pattern(input_line.substr(1), pattern.substr(1));
 }
 
 int main(int argc, char *argv[]) {
@@ -89,7 +81,7 @@ int main(int argc, char *argv[]) {
   std::getline(std::cin, input_line);
 
   try {
-    if (recursive_match_pattern(input_line, pattern)) {
+    if (match_pattern(input_line, pattern)) {
       return 0;
     } else {
       return 1;
